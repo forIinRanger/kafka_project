@@ -1,0 +1,58 @@
+openapi: 3.0.3
+info:
+  title: MyLittlePony
+  description: You could process strings in smth beautiful!
+  version: 1.0.0
+servers:
+  - url: 'http://localhost:8080'
+paths:
+  /task:
+    post:
+      description: Put string for processing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: string
+                  description: Data to process
+                  example: "Hello, world!"
+              required:
+                - data
+
+      responses:
+        200:
+          description: New response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Data accepted for processing"
+        404:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Bad request"
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Unprocessable entity"
+
+  
