@@ -2,9 +2,10 @@ package app
 
 import (
 	"context"
-	"project/app/sender"
-	"project/app/validator"
-	"project/domain"
+	"project/internal/app/sender"
+	"project/internal/app/validator"
+
+	"project/internal/domain"
 )
 
 type Service interface {
@@ -16,14 +17,14 @@ type MyService struct {
 	Sender    sender.Sender
 }
 
-func NewService(v validator.Validator, s sender.Sender) *MyService {
-	return &MyService{
+func NewService(v validator.Validator, s sender.Sender) MyService {
+	return MyService{
 		Validator: v,
 		Sender:    s,
 	}
 }
 
-func (s *MyService) HandleMessage(ctx context.Context, m domain.Message) error {
+func (s MyService) HandleMessage(ctx context.Context, m domain.Message) error {
 	if ok, err := s.Validator.Validate(ctx, m.Data); !ok {
 		return err
 	}
