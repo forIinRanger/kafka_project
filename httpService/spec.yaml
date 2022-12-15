@@ -1,4 +1,4 @@
-openapi: 3.0.3
+openapi: 3.0.8
 info:
   title: MyLittlePony
   description: You could process strings in smth beautiful!

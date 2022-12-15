@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package consumer;
+
+option go_package = "/proto;protos";
+
+service Processor {
+  rpc ProcessData (ProcessRequest) returns (ProcessResponse);
+}
+
+message ProcessRequest {
+  string data = 1;
+}
+
+message ProcessResponse {
+  int64 letters_count = 1;
+}
