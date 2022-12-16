@@ -2,11 +2,11 @@ package adapters
 
 import (
 	"context"
-	"project/internal/app"
-	"project/internal/app/sender"
-	"project/internal/app/validator"
-	"project/internal/domain"
-	"project/pkg/api"
+	"httpservice/internal/app"
+	"httpservice/internal/app/sender"
+	"httpservice/internal/app/validator"
+	"httpservice/internal/domain"
+	"httpservice/pkg/api"
 )
 
 type MyServer struct {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/IBM/sarama"
 	"grpcservice/internal/app"
-	"grpcservice/internal/domain/repository"
 )
 
 const PartitionName = "my_topic"
@@ -17,10 +16,9 @@ type KafkaConsumer struct {
 }
 
 //nolint:all
-func NewKafkaConsumer(ctx context.Context, addrs []string, db repository.Repository) (*KafkaConsumer, error) {
+func NewKafkaConsumer(ctx context.Context, addrs []string, serv *app.GrpcService) (*KafkaConsumer, error) {
 	config := sarama.NewConfig()
 	config.Consumer.Return.Errors = true
-	config.Version = sarama.V2_6_0_0
 	cons, err := sarama.NewConsumer(addrs, config)
 	if err != nil {
 		return nil, err
@@ -30,7 +28,6 @@ func NewKafkaConsumer(ctx context.Context, addrs []string, db repository.Reposit
 		return nil, err
 	}
 	ctx1, cancel := context.WithCancel(ctx)
-	serv := app.NewGrpcService(db)
 	return &KafkaConsumer{
 		ctx:      ctx1,
 		cancel:   cancel,

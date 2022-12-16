@@ -2,9 +2,9 @@ package app
 
 import (
 	"context"
-	"project/internal/app/sender"
-	"project/internal/app/validator"
-	"project/internal/domain"
+	"httpservice/internal/app/sender"
+	"httpservice/internal/app/validator"
+	"httpservice/internal/domain"
 )
 
 type Service interface {

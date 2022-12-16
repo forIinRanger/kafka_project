@@ -9,16 +9,16 @@ COPY .. .
 
 # Скачиваем зависимости и собираем бинарник
 RUN go mod download
-RUN go build -o httpservice .
+RUN go build -o grpcservice .
 
 # Используем минимальный образ для финального контейнера
 FROM alpine:latest
 
 # Копируем бинарник из builder-образа
-COPY --from=builder /app/httpservice /usr/local/bin/httpservice
+COPY --from=builder /app/grpcservice /usr/local/bin/grpcservice
 
 # Указываем команду запуска сервиса
-CMD ["httpservice"]
+CMD ["grpcservice"]
 
 # Открываем порт (если ваш сервис слушает, например, 8080)
-EXPOSE 8080
+EXPOSE 50051

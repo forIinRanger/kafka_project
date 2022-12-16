@@ -3,13 +3,14 @@ package cmd
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
 	"grpcservice/internal/adapters"
 	"grpcservice/internal/app"
 	pb "grpcservice/proto"
+	"log"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -19,10 +20,15 @@ import (
 //nolint:all
 func RunServer() {
 	//upload environment variables
-	godotenv.Load("../.env")
+	if os.Getenv("DOCKER_ENV") == "" {
+		// Мы НЕ в Docker, загрузи .env файл
+		if err := godotenv.Load("../.env"); err != nil {
+			log.Println("No .env file found")
+		}
+	}
 	//DB
 	dbUrl := os.Getenv("DATABASE_URL")
-	fmt.Println(dbUrl)
+	log.Println(dbUrl)
 	db, err := sql.Open("postgres", dbUrl)
 	if err != nil {
 		panic(err)
@@ -34,9 +40,9 @@ func RunServer() {
 		panic(err)
 	}
 	ps := adapters.NewPostgresRepo(db)
-
+	serv := app.NewGrpcService(ps)
 	//Kafka huyafka
-	kfkConsumer, err := adapters.NewKafkaConsumer(context.Background(), []string{"localhost:9092"}, ps)
+	kfkConsumer, err := adapters.NewKafkaConsumer(context.Background(), []string{"kafka:9092"}, serv)
 	if err != nil {
 		panic(err)
 	}
@@ -47,10 +53,19 @@ func RunServer() {
 	}()
 
 	//grpc
-	serv := app.NewGrpcService(ps)
+
 	grpcHandler := adapters.NewGRPCHandler(*serv)
 	grpcServer := grpc.NewServer()
 	pb.RegisterProcessorServer(grpcServer, grpcHandler)
+	lis, err := net.Listen("tcp", ":"+os.Getenv("GRPC_PORT"))
+	if err != nil {
+		log.Fatalf("Error trying to connect grpc port: %w", err)
+	}
+	go func() {
+		if err = grpcServer.Serve(lis); lis != nil {
+			log.Fatalf("Error while running: %w", err)
+		}
+	}()
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
