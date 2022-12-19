@@ -3,18 +3,18 @@ package adapters
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	sq "github.com/Masterminds/squirrel"
+	"log"
 )
 
 type PostgresRepo struct {
 	db *sql.DB
-	sb sq.StatementBuilderType
 }
 
 func NewPostgresRepo(db *sql.DB) *PostgresRepo {
 	return &PostgresRepo{
 		db: db,
-		sb: sq.StatementBuilder.PlaceholderFormat(sq.Dollar),
 	}
 }
 
@@ -24,15 +24,18 @@ func (r *PostgresRepo) GetByString(ctx context.Context, query string) (int, erro
 		return 0, ctx.Err()
 	default:
 	}
-	count := sq.Select("count").From("messages").Where(sq.Eq{"value": query})
+	ctx1, cancel := context.WithCancel(ctx)
+	count := sq.Select("letter_counts").From("messages").Where(sq.Eq{"text": query}).PlaceholderFormat(sq.Dollar)
 	sql, args, err := count.ToSql()
 	if err != nil {
 		return 0, err
 	}
-	rows, err := r.db.Query(sql, args)
+	connection, err := r.db.Conn(ctx1)
+	defer cancel()
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("Error with connection to db: %w", err)
 	}
+	rows := connection.QueryRowContext(ctx1, sql, args...)
 	var res int
 	err = rows.Scan(&res)
 	if err != nil {
@@ -47,10 +50,20 @@ func (r *PostgresRepo) PutStatistics(ctx context.Context, query string, count in
 		return ctx.Err()
 	default:
 	}
-	sql, args, err := sq.Insert("messages").Columns("value", "count").Values(query, count).ToSql()
+	ctx1, cancel := context.WithCancel(ctx)
+	sql, args, err := sq.Insert("messages").Columns("text", "letter_counts").Values(query, count).PlaceholderFormat(sq.Dollar).ToSql()
+	log.Printf("huy %v", sql)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error in sql query: %w", err)
 	}
-	_, err = r.db.Query(sql, args)
+	connection, err := r.db.Conn(ctx1)
+	defer cancel()
+	if err != nil {
+		return fmt.Errorf("Error with connection to db: %w", err)
+	}
+	_, err = connection.ExecContext(ctx1, sql, args...)
+	if err != nil {
+		return fmt.Errorf("Error with executing: %w", err)
+	}
 	return err
 }

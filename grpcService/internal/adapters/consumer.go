@@ -4,13 +4,14 @@ import (
 	"context"
 	"github.com/IBM/sarama"
 	"grpcservice/internal/app"
+	"log"
+	"runtime/debug"
 )
 
 const PartitionName = "my_topic"
 
 type KafkaConsumer struct {
 	ctx      context.Context
-	cancel   context.CancelFunc
 	Consumer sarama.PartitionConsumer
 	service  *app.GrpcService
 }
@@ -27,28 +28,43 @@ func NewKafkaConsumer(ctx context.Context, addrs []string, serv *app.GrpcService
 	if err != nil {
 		return nil, err
 	}
-	ctx1, cancel := context.WithCancel(ctx)
+	ctx1, _ := context.WithCancel(ctx)
 	return &KafkaConsumer{
 		ctx:      ctx1,
-		cancel:   cancel,
 		Consumer: partCons,
 		service:  serv,
 	}, nil
 }
 
 func (kc *KafkaConsumer) StartCatching() error {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Kafka Consumer panic: %v", r)
+			log.Printf("Stack:\n%s", debug.Stack())
+		}
+	}()
 	for {
 		select {
 		case <-kc.ctx.Done():
 			return kc.ctx.Err()
-		case msg := <-kc.Consumer.Messages():
+		case msg, ok := <-kc.Consumer.Messages():
+			if !ok {
+				log.Println("Kafka Consumer: messages channel closed")
+				return nil
+			}
+			log.Println("Kafka Consumer: message received")
+			log.Printf("Msg.Value: '%v'", string(msg.Value))
 			err := kc.service.ProcessMessage(kc.ctx, string(msg.Value))
 			if err != nil {
-				return err
+				log.Printf("Processing error: %v", err)
 			}
-		case err := <-kc.Consumer.Errors():
+		case err, ok := <-kc.Consumer.Errors():
+			if !ok {
+				log.Println("Kafka Consumer: errors channel closed")
+				return nil
+			}
 			if err != nil {
-				return err
+				log.Printf("Error got from consumer error's channel: %v", err)
 			}
 		}
 
@@ -56,6 +72,5 @@ func (kc *KafkaConsumer) StartCatching() error {
 }
 
 func (kc *KafkaConsumer) StopCatching() error {
-	kc.cancel()
 	return kc.Consumer.Close()
 }

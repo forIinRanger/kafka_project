@@ -40,6 +40,10 @@ func RunServer() {
 	<-notificationCh
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
+	err = senderProd.Producer.Close()
+	if err != nil {
+		log.Println("Cannot close producer")
+	}
 	if err := serv.Shutdown(ctx); err != nil {
 		log.Fatalf("Server forced to exit: %v", err)
 	}

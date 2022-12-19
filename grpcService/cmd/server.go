@@ -46,11 +46,8 @@ func RunServer() {
 	if err != nil {
 		panic(err)
 	}
-	defer kfkConsumer.Consumer.Close()
-	go func() {
-		err = kfkConsumer.StartCatching()
 
-	}()
+	go kfkConsumer.StartCatching()
 
 	//grpc
 
@@ -71,7 +68,10 @@ func RunServer() {
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 	<-signals
 
+	err = kfkConsumer.StopCatching()
+	if err != nil {
+		log.Println(err)
+	}
 	grpcServer.GracefulStop()
-	kfkConsumer.StopCatching()
 
 }

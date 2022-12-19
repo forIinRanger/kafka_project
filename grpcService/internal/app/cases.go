@@ -15,10 +15,10 @@ func NewGrpcService(rep repository.Repository) *GrpcService {
 }
 
 func (g *GrpcService) GetStats(ctx context.Context, query string) (int, error) {
-	return g.repo.GetByString(ctx, query)
+	return (g.repo).GetByString(ctx, query)
 }
 
 func (g *GrpcService) ProcessMessage(ctx context.Context, query string) error {
 	stats := domain.CountingLetters(domain.Text{Message: query})
-	return g.repo.PutStatistics(ctx, query, stats.LettersCount)
+	return (g.repo).PutStatistics(ctx, query, stats.LettersCount)
 }
