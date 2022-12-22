@@ -24,18 +24,17 @@ func (r *PostgresRepo) GetByString(ctx context.Context, query string) (int, erro
 		return 0, ctx.Err()
 	default:
 	}
-	ctx1, cancel := context.WithCancel(ctx)
 	count := sq.Select("letter_counts").From("messages").Where(sq.Eq{"text": query}).PlaceholderFormat(sq.Dollar)
 	sql, args, err := count.ToSql()
 	if err != nil {
 		return 0, err
 	}
-	connection, err := r.db.Conn(ctx1)
-	defer cancel()
+	connection, err := r.db.Conn(ctx)
+	defer r.db.Close()
 	if err != nil {
 		return 0, fmt.Errorf("Error with connection to db: %w", err)
 	}
-	rows := connection.QueryRowContext(ctx1, sql, args...)
+	rows := connection.QueryRowContext(ctx, sql, args...)
 	var res int
 	err = rows.Scan(&res)
 	if err != nil {
@@ -50,18 +49,17 @@ func (r *PostgresRepo) PutStatistics(ctx context.Context, query string, count in
 		return ctx.Err()
 	default:
 	}
-	ctx1, cancel := context.WithCancel(ctx)
-	sql, args, err := sq.Insert("messages").Columns("text", "letter_counts").Values(query, count).PlaceholderFormat(sq.Dollar).ToSql()
-	log.Printf("huy %v", sql)
+	toSql, args, err := sq.Insert("messages").Columns("text", "letter_counts").Values(query, count).PlaceholderFormat(sq.Dollar).ToSql()
+	log.Printf("huy %v", toSql)
 	if err != nil {
-		return fmt.Errorf("Error in sql query: %w", err)
+		return fmt.Errorf("Error in toSql query: %w", err)
 	}
-	connection, err := r.db.Conn(ctx1)
-	defer cancel()
+	connection, err := r.db.Conn(ctx)
+	defer r.db.Close()
 	if err != nil {
 		return fmt.Errorf("Error with connection to db: %w", err)
 	}
-	_, err = connection.ExecContext(ctx1, sql, args...)
+	_, err = connection.ExecContext(ctx, toSql, args...)
 	if err != nil {
 		return fmt.Errorf("Error with executing: %w", err)
 	}
